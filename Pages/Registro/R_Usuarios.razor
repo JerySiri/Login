@@ -1,0 +1,225 @@
+﻿@page "/Usuarios"
+@page "/Usuarios/{UsuariosId:int}"
+
+@using Models;
+@using BLL;
+
+@inject IToastService toast
+
+<EditForm Model="User" OnValidSubmit="Guardar">
+
+    <DataAnnotationsValidator />
+
+    <div class="card">
+
+        <div class="card-header justify-content-center">
+
+            <h3 class="text-center">Registro de Usuarios</h3>
+
+        </div>
+
+        <div class="card-body">
+
+            @*UsuarioID y Boton Buscar*@
+            <div class="form-row">
+                <div class="col">
+                    <div class="form-group">
+
+                        <label class="form-label">ID</label>
+                        <div class="input-group ">
+                            <InputNumber @bind-Value="User.UsuarioId" class="form-control col-5" />
+
+                            <div class="input-group-append">
+                                <button type="button" class="btn btn-info" @onclick="Buscar">
+                                    <i class="oi oi-magnifying-glass" />
+                                    Buscar
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            @*Fecha*@
+            <div class="form-group">
+
+                <label>Fecha</label>
+                <InputDate @bind-Value="User.Fecha" class="form-control col-6" />
+
+            </div>
+
+            <div class="row">
+
+                <div class="col-6">
+                    @*Nombre*@
+                    <div class="form-group justify-content-center">
+
+                        <label>Nombre</label>
+                        <InputText @bind-Value="User.Nombre" class="form-control" />
+                        <ValidationMessage For="@(() => User.Nombre)" />
+
+                    </div>
+                </div>
+
+                <div class="col-6">
+                    @*Alias*@
+                    <div class="form-group justify-content-center">
+
+                        <label>Alías</label>
+                        <InputText @bind-Value="User.Alias" class="form-control" />
+                        <ValidationMessage For="@(() => User.Alias)" />
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            @*Email*@
+            <div class="form-group justify-content-center">
+
+                <label>Email</label>
+                <InputText @bind-Value="User.Email" class="form-control" />
+                <ValidationMessage For="@(() => User.Email)" />
+
+            </div>
+
+            <div class="row">
+
+                <div class="col-6">
+                    <label>Contraseña</label>
+                    <input type="password" @bind-value="User.Clave" class="form-control">
+                    <ValidationMessage For="@(() => User.Clave)" />
+                </div>
+
+                <div class="col-6">
+                    <label>Confirmar Contraseña</label>
+                    <input type="password" @bind-value="confirmarContrasena" class="form-control">
+
+                </div>
+
+            </div>
+
+        </div>
+
+        @*Botones*@
+        <div class="card-footer">
+
+            <div class="form-group text-center" display: inline-block>
+
+                @*Boton Nuevo*@
+                <button type="button" class="btn btn-lg btn-primary" @onclick="Nuevo">
+                    <i class="oi oi-file mr-2" />
+                    Nuevo
+
+                </button>
+
+                @*Boton Guardar*@
+                <button type="submit" class="btn btn-lg btn-success">
+                    <i class="oi oi-account-login" style="transform:rotate(90deg)" />
+                    Guardar
+                </button>
+
+                @*Boton Eliminar*@
+                <button type="button" class="btn btn-lg btn-danger" @onclick="Eliminar">
+                    <i class="oi oi-trash mr-2" />
+                    Eliminar
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+</EditForm>
+
+
+
+@code {
+    [Parameter]
+    public int UsuariosId { get; set; }
+
+    private Usuarios User { get; set; }
+    private string confirmarContrasena { get; set; }
+
+    protected override void OnInitialized()
+    {
+        Nuevo();
+        Buscar();
+    }
+
+    public void Nuevo()
+    {
+        User = new Usuarios();
+    }
+
+    private void Buscar()
+    {
+        if (User.UsuarioId > 0)
+        {
+            var encontrado = UsuariosBLL.Buscar(User.UsuarioId);
+
+            if (encontrado != null)
+            {
+                this.User = encontrado;
+            }
+            else
+                toast.ShowWarning("No encontrado");
+        }
+    }
+
+    public void Guardar()
+    {
+        bool fueGuardado = false;
+
+        if (Validar())
+            return;
+
+        User.Clave = UsuariosBLL.GetSHA256(User.Clave);
+        fueGuardado = UsuariosBLL.Guardar(User);
+
+        if (fueGuardado)
+        {
+            Nuevo();
+            toast.ShowSuccess("Guardado correctamente");
+        }
+        else
+            toast.ShowError("No fue posible guardar");
+    }
+
+    public bool Validar()
+    {
+        bool paso = true;
+
+        if(UsuariosBLL.ExisteAlias(User.Alias, User.UsuarioId))
+        {
+            paso = false;
+            toast.ShowSuccess("El alias que escribio ya esta siendo utilizado");
+        }
+
+        if(User.Clave != confirmarContrasena)
+        {
+            toast.ShowSuccess("Las claves no coinciden.");
+            paso = false;
+        }
+
+        return paso;
+
+    }
+
+    public void Eliminar()
+    {
+        bool esElimino;
+
+        esElimino = UsuariosBLL.Eliminar(User.UsuarioId);
+
+        if (esElimino)
+        {
+            Nuevo();
+            toast.ShowSuccess("Eliminado correctamente");
+        }
+        else
+            toast.ShowError("No fue posible eliminar");
+    }
+}
